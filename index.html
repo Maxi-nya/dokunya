@@ -1,18 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Dokunyan (Prototype)</title>
   <style>
-    body {
-      font-family: sans-serif;
-      background-color: #f4f4f4;
-      padding: 20px;
-    }
-    table {
-      border-collapse: collapse;
-      margin: 0 auto;
-    }
+    body { font-family: sans-serif; background-color: #f4f4f4; padding: 20px; }
+    table { border-collapse: collapse; margin: 0 auto; }
     th, td {
       border: 2px solid #555;
       padding: 10px;
@@ -22,39 +15,16 @@
       vertical-align: middle;
       position: relative;
     }
-    input {
-      width: 100px;
-      text-align: center;
-    }
-    .correct {
-      background-color: #b6e3a4;
-      font-weight: bold;
-    }
-    .error {
-      background-color: #fbb;
-    }
-    .category-cell {
-      background-color: #ddd;
-      font-weight: bold;
-    }
+    input { width: 100px; text-align: center; }
+    .correct { background-color: #b6e3a4; font-weight: bold; }
+    .error { background-color: #fbb; }
+    .category-cell { background-color: #ddd; font-weight: bold; }
     .autocomplete-items {
-      position: absolute;
-      top: 100%;
-      left: 0;
-      right: 0;
-      z-index: 99;
-      background-color: white;
-      border: 1px solid #ccc;
-      max-height: 120px;
-      overflow-y: auto;
+      position: absolute; top: 100%; left: 0; right: 0; z-index: 99;
+      background-color: white; border: 1px solid #ccc; max-height: 120px; overflow-y: auto;
     }
-    .autocomplete-items div {
-      padding: 8px;
-      cursor: pointer;
-    }
-    .autocomplete-items div:hover {
-      background-color: #e9e9e9;
-    }
+    .autocomplete-items div { padding: 8px; cursor: pointer; }
+    .autocomplete-items div:hover { background-color: #e9e9e9; }
   </style>
 </head>
 <body>
@@ -68,20 +38,17 @@
       type: "Monster Type",
       element: "Monster Element",
       weaknesses: "Weakness",
-      main_map: "Main Map",
-      habitat: "Habitat",
-      origin_game: "Origin Game",
-      evolves_from: "Evolves From"
+      main_map: "Main Map"
     };
 
     const usedMonsters = new Set();
 
-function getDailySeed(date = new Date()) {
-  const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(date.getUTCDate()).padStart(2, '0');
-  return `${year}${month}${day}`;
-}
+    function getDailySeed(date = new Date()) {
+      const year = date.getUTCFullYear();
+      const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(date.getUTCDate()).padStart(2, '0');
+      return `${year}${month}${day}`;
+    }
 
     function seededRandom(seed) {
       let h = 2166136261 >>> 0;
@@ -117,11 +84,9 @@ function getDailySeed(date = new Date()) {
         let val = this.value;
         closeAllLists();
         if (!val) return false;
-
         const list = document.createElement("div");
         list.setAttribute("class", "autocomplete-items");
         td.appendChild(list);
-
         monsterData.forEach(monster => {
           if (monster.name.toLowerCase().startsWith(val.toLowerCase())) {
             const item = document.createElement("div");
@@ -137,8 +102,7 @@ function getDailySeed(date = new Date()) {
       });
 
       function closeAllLists() {
-        const lists = document.querySelectorAll(".autocomplete-items");
-        lists.forEach(l => l.remove());
+        document.querySelectorAll(".autocomplete-items").forEach(l => l.remove());
       }
 
       document.addEventListener("click", function (e) {
@@ -148,6 +112,7 @@ function getDailySeed(date = new Date()) {
 
     function buildGrid(monsters, rowCat, colCat, rowVals, colVals) {
       const gameDiv = document.getElementById("game");
+      gameDiv.innerHTML = "";
       const table = document.createElement("table");
 
       const header = document.createElement("tr");
@@ -175,15 +140,12 @@ function getDailySeed(date = new Date()) {
           input.addEventListener("change", () => {
             const name = input.value.trim();
             const monster = monsters.find(m => m.name.toLowerCase() === name.toLowerCase());
-
             if (!monster) {
               input.className = "error";
               return;
             }
-
             const valRow = monster[rowCat];
             const valCol = monster[colCat];
-
             const matchRow = Array.isArray(valRow) ? valRow.includes(row) : valRow === row;
             const matchCol = Array.isArray(valCol) ? valCol.includes(col) : valCol === col;
 
@@ -205,79 +167,72 @@ function getDailySeed(date = new Date()) {
 
       gameDiv.appendChild(table);
     }
-    
-fetch("monsters.json")
-  .then(res => res.json())
-  .then(monsters => {
-    const seed = getDailySeed();
-    const rng = seededRandom(seed);
-    const categoryKeys = ["type", "element", "weakness", "main_map"].sort(() => rng() - 0.5);
-    const rowCat = categoryKeys[0];
-    const colCat = categoryKeys[1];
 
-    // 1️⃣ Filtrar monstruos que tengan datos válidos en ambas categorías
-    const validMonsters = monsters.filter(m => {
-      const a = m[rowCat], b = m[colCat];
-      const okA = a && (Array.isArray(a) ? a.length > 0 : true);
-      const okB = b && (Array.isArray(b) ? b.length > 0 : true);
-      return okA && okB;
-    });
+    fetch("monsters.json")
+      .then(res => res.json())
+      .then(monsters => {
+        const seed = getDailySeed();
+        const rng = seededRandom(seed);
+        const categoryKeys = Object.keys(categories).sort(() => rng() - 0.5);
+        const rowCat = categoryKeys[0];
+        const colCat = categoryKeys[1];
 
-    // 2️⃣ Crear mapa de combinaciones válidas: "row|col" => [monsters]
-    const comboMap = new Map();
-    validMonsters.forEach(m => {
-      const rows = Array.isArray(m[rowCat]) ? m[rowCat] : [m[rowCat]];
-      const cols = Array.isArray(m[colCat]) ? m[colCat] : [m[colCat]];
-      rows.forEach(r => {
-        cols.forEach(c => {
-          const key = `${r}|${c}`;
-          if (!comboMap.has(key)) comboMap.set(key, []);
-          comboMap.get(key).push(m.name);
+        const validMonsters = monsters.filter(m => {
+          const a = m[rowCat], b = m[colCat];
+          const okA = a && (Array.isArray(a) ? a.length > 0 : true);
+          const okB = b && (Array.isArray(b) ? b.length > 0 : true);
+          return okA && okB;
         });
-      });
-    });
 
-    // 3️⃣ Obtener todas las filas y columnas posibles
-    const allRows = [...new Set(Array.from(comboMap.keys(), k => k.split('|')[0]))];
-    const allCols = [...new Set(Array.from(comboMap.keys(), k => k.split('|')[1]))];
+        const comboMap = new Map();
+        validMonsters.forEach(m => {
+          const rows = Array.isArray(m[rowCat]) ? m[rowCat] : [m[rowCat]];
+          const cols = Array.isArray(m[colCat]) ? m[colCat] : [m[colCat]];
+          rows.forEach(r => {
+            cols.forEach(c => {
+              const key = `${r}|${c}`;
+              if (!comboMap.has(key)) comboMap.set(key, []);
+              comboMap.get(key).push(m.name);
+            });
+          });
+        });
 
-    // 4️⃣ Buscar combinación 3x3 con solución en todas las celdas
-    function findValidGrid(rng, rows, cols, comboMap) {
-      const shuffledRows = rows.slice().sort(() => rng() - 0.5);
-      const shuffledCols = cols.slice().sort(() => rng() - 0.5);
+        const allRows = [...new Set(Array.from(comboMap.keys(), k => k.split('|')[0]))];
+        const allCols = [...new Set(Array.from(comboMap.keys(), k => k.split('|')[1]))];
 
-      for (let i = 0; i <= shuffledRows.length - 3; i++) {
-        for (let j = 0; j <= shuffledCols.length - 3; j++) {
-          const rowSlice = shuffledRows.slice(i, i + 3);
-          const colSlice = shuffledCols.slice(j, j + 3);
+        function findValidGrid(rng, rows, cols, comboMap, size) {
+          const shuffledRows = rows.slice().sort(() => rng() - 0.5);
+          const shuffledCols = cols.slice().sort(() => rng() - 0.5);
 
-          const allValid = rowSlice.every(r =>
-            colSlice.every(c => comboMap.has(`${r}|${c}`))
-          );
-
-          if (allValid) return { rows: rowSlice, cols: colSlice };
+          for (let i = 0; i <= shuffledRows.length - size; i++) {
+            for (let j = 0; j <= shuffledCols.length - size; j++) {
+              const rowSlice = shuffledRows.slice(i, i + size);
+              const colSlice = shuffledCols.slice(j, j + size);
+              const allValid = rowSlice.every(r =>
+                colSlice.every(c => comboMap.has(`${r}|${c}`))
+              );
+              if (allValid) return { rows: rowSlice, cols: colSlice };
+            }
+          }
+          return null;
         }
-      }
-      return null;
-    }
 
-    const result = findValidGrid(rng, allRows, allCols, comboMap);
+        let result = findValidGrid(rng, allRows, allCols, comboMap, 3);
+        if (!result) result = findValidGrid(rng, allRows, allCols, comboMap, 2);
 
-    if (!result) {
-      document.getElementById("game").innerText = "❌ No se pudo generar una grilla válida con los datos actuales.";
-      return;
-    }
+        if (!result) {
+          document.getElementById("game").innerText = "❌ No se pudo generar una grilla válida con los datos actuales.";
+          return;
+        }
 
-    const { rows: rowVals, cols: colVals } = result;
+        const { rows: rowVals, cols: colVals } = result;
+        document.getElementById("dailyInfo").innerText =
+          `🗓️ Puzzle del día: ${seed.slice(0,4)}-${seed.slice(4,6)}-${seed.slice(6)} – Categorías: ${categories[rowCat]} × ${categories[colCat]}`;
 
-    // 🗓️ Mostrar información del día
-    const dailyInfo = document.getElementById("dailyInfo");
-    dailyInfo.innerText = `🗓️ Puzzle del día: ${seed.slice(0,4)}-${seed.slice(4,6)}-${seed.slice(6)} – Categorías: ${categories[rowCat]} × ${categories[colCat]}`;
-
-    // 🧩 Construir la grilla
-    buildGrid(validMonsters, rowCat, colCat, rowVals, colVals);
-  })
-  .catch(err => console.error("Failed to load JSON", err));
+        buildGrid(validMonsters, rowCat, colCat, rowVals, colVals);
+      })
+      .catch(err => console.error("Failed to load JSON", err));
   </script>
 </body>
 </html>
+
