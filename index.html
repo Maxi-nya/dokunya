@@ -64,6 +64,21 @@
       };
     }
 
+    function uniqueValues(data, key) {
+      const values = new Set();
+      data.forEach(m => {
+        const val = m[key];
+        if (Array.isArray(val)) val.forEach(v => values.add(v));
+        else if (val) values.add(val);
+      });
+      return Array.from(values);
+    }
+
+    function pickValues(rng, values, count) {
+      const shuffled = values.slice().sort(() => rng() - 0.5);
+      return shuffled.slice(0, count);
+    }
+
     function autocomplete(input, td, monsterData) {
       input.addEventListener("input", function () {
         let val = this.value;
@@ -85,9 +100,11 @@
           }
         });
       });
+
       function closeAllLists() {
         document.querySelectorAll(".autocomplete-items").forEach(l => l.remove());
       }
+
       document.addEventListener("click", function (e) {
         if (e.target !== input) closeAllLists();
       });
@@ -98,7 +115,6 @@
       gameDiv.innerHTML = "";
       const table = document.createElement("table");
 
-      // Header row (empty corner + col headers)
       const header = document.createElement("tr");
       header.appendChild(document.createElement("th"));
       colVals.forEach(col => {
@@ -109,7 +125,6 @@
       });
       table.appendChild(header);
 
-      // Rows
       rowVals.forEach(row => {
         const tr = document.createElement("tr");
         const th = document.createElement("th");
@@ -125,13 +140,10 @@
           input.addEventListener("change", () => {
             const name = input.value.trim();
             const monster = monsters.find(m => m.name.toLowerCase() === name.toLowerCase());
-
             if (!monster) {
               input.className = "error";
               return;
             }
-
-            // Verifica que el monstruo coincida con fila y columna
             const valRow = monster[rowCat];
             const valCol = monster[colCat];
             const matchRow = Array.isArray(valRow) ? valRow.includes(row) : valRow === row;
@@ -156,52 +168,30 @@
       gameDiv.appendChild(table);
     }
 
-    // Helper: combina combinaciones para formar matriz válida
-    function findValidGrid(rng, rowVals, colVals, comboMap, size) {
-      // Mezcla valores para explorar combinaciones diferentes
-      const shuffledRows = rowVals.slice().sort(() => rng() - 0.5);
-      const shuffledCols = colVals.slice().sort(() => rng() - 0.5);
-
-      for (let rStart = 0; rStart <= shuffledRows.length - size; rStart++) {
-        for (let cStart = 0; cStart <= shuffledCols.length - size; cStart++) {
-          const candidateRows = shuffledRows.slice(rStart, rStart + size);
-          const candidateCols = shuffledCols.slice(cStart, cStart + size);
-
-          // Verifica que todas las combinaciones existen en comboMap
-          const allExist = candidateRows.every(r =>
-            candidateCols.every(c => comboMap.has(`${r}|${c}`))
-          );
-
-          if (allExist) return { rows: candidateRows, cols: candidateCols };
-        }
-      }
-      return null;
-    }
-
     fetch("data/monsters.json")
       .then(res => res.json())
       .then(monsters => {
         const seed = getDailySeed();
         const rng = seededRandom(seed);
 
-        // Elegir categorías al azar según semilla
         const categoryKeys = Object.keys(categories).sort(() => rng() - 0.5);
         const rowCat = categoryKeys[0];
         const colCat = categoryKeys[1];
 
-        // Filtrar monstruos que tengan datos válidos para ambas categorías
-        const validMonsters = monsters.filter(m => {
-          const a = m[rowCat], b = m[colCat];
-          const okA = a && (Array.isArray(a) ? a.length > 0 : true);
-          const okB = b && (Array.isArray(b) ? b.length > 0 : true);
-          return okA && okB;
-        });
-
-        // Construir mapa comboMap (key = "row|col", value = array de monstruos con esa combinación)
+        // Construir comboMap solo con monstruos que tengan valores válidos en rowCat y colCat
         const comboMap = new Map();
-        validMonsters.forEach(m => {
-          const rows = Array.isArray(m[rowCat]) ? m[rowCat] : [m[rowCat]];
-          const cols = Array.isArray(m[colCat]) ? m[colCat] : [m[colCat]];
+
+        monsters.forEach(m => {
+          const valRow = m[rowCat];
+          const valCol = m[colCat];
+          const okRow = valRow && (Array.isArray(valRow) ? valRow.length > 0 : true);
+          const okCol = valCol && (Array.isArray(valCol) ? valCol.length > 0 : true);
+
+          if (!okRow || !okCol) return; // saltar monstruos sin valores válidos en alguna categoría
+
+          const rows = Array.isArray(valRow) ? valRow : [valRow];
+          const cols = Array.isArray(valCol) ? valCol : [valCol];
+
           rows.forEach(r => {
             cols.forEach(c => {
               const key = `${r}|${c}`;
@@ -211,11 +201,28 @@
           });
         });
 
-        // Sacar todas las filas y columnas disponibles
         const allRows = [...new Set(Array.from(comboMap.keys(), k => k.split('|')[0]))];
         const allCols = [...new Set(Array.from(comboMap.keys(), k => k.split('|')[1]))];
 
-        // Buscar grilla 3x3 válida, si no hay 2x2 válida
+        function findValidGrid(rng, rowVals, colVals, comboMap, size) {
+          const shuffledRows = rowVals.slice().sort(() => rng() - 0.5);
+          const shuffledCols = colVals.slice().sort(() => rng() - 0.5);
+
+          for (let rStart = 0; rStart <= shuffledRows.length - size; rStart++) {
+            for (let cStart = 0; cStart <= shuffledCols.length - size; cStart++) {
+              const candidateRows = shuffledRows.slice(rStart, rStart + size);
+              const candidateCols = shuffledCols.slice(cStart, cStart + size);
+
+              const allExist = candidateRows.every(r =>
+                candidateCols.every(c => comboMap.has(`${r}|${c}`))
+              );
+
+              if (allExist) return { rows: candidateRows, cols: candidateCols };
+            }
+          }
+          return null;
+        }
+
         let grid = findValidGrid(rng, allRows, allCols, comboMap, 3);
         if (!grid) grid = findValidGrid(rng, allRows, allCols, comboMap, 2);
 
@@ -226,7 +233,15 @@
 
         const { rows: rowVals, cols: colVals } = grid;
 
-        // Mostrar info del puzzle
+        // Filtrar monstruos válidos para la grilla
+        const validMonsters = monsters.filter(m => {
+          const valRow = m[rowCat];
+          const valCol = m[colCat];
+          const rows = Array.isArray(valRow) ? valRow : [valRow];
+          const cols = Array.isArray(valCol) ? valCol : [valCol];
+          return rows.some(r => rowVals.includes(r)) && cols.some(c => colVals.includes(c));
+        });
+
         document.getElementById("dailyInfo").innerText =
           `🗓️ Puzzle del día: ${seed.slice(0,4)}-${seed.slice(4,6)}-${seed.slice(6)} – Categorías: ${categories[rowCat]} × ${categories[colCat]}`;
 
