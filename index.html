@@ -41,7 +41,7 @@
       main_map: "Main Map"
     };
 
-    const usedMonsters = new Set();
+    let usedMonsters = new Set();
 
     function getDailySeed(date = new Date()) {
       const year = date.getUTCFullYear();
@@ -113,6 +113,8 @@
     function buildGrid(monsters, rowCat, colCat, rowVals, colVals) {
       const gameDiv = document.getElementById("game");
       gameDiv.innerHTML = "";
+      usedMonsters = new Set();
+
       const table = document.createElement("table");
 
       const header = document.createElement("tr");
@@ -139,6 +141,10 @@
 
           input.addEventListener("change", () => {
             const name = input.value.trim();
+            if (name === "") {
+              input.className = "";
+              return;
+            }
             const monster = monsters.find(m => m.name.toLowerCase() === name.toLowerCase());
             if (!monster) {
               input.className = "error";
@@ -212,8 +218,12 @@
             for (let j = 0; j <= shuffledCols.length - size; j++) {
               const rowSlice = shuffledRows.slice(i, i + size);
               const colSlice = shuffledCols.slice(j, j + size);
+
               const allValid = rowSlice.every(r =>
-                colSlice.every(c => comboMap.has(`${r}|${c}`))
+                colSlice.every(c => {
+                  const mons = comboMap.get(`${r}|${c}`);
+                  return mons && mons.length > 0;
+                })
               );
               if (allValid) return { rows: rowSlice, cols: colSlice };
             }
