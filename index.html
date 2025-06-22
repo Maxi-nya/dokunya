@@ -168,7 +168,7 @@
       gameDiv.appendChild(table);
     }
 
-    fetch("monsters.json")
+    fetch("data/monsters.json")
       .then(res => res.json())
       .then(monsters => {
         const seed = getDailySeed();
@@ -184,6 +184,8 @@
           return okA && okB;
         });
 
+        console.log("✅ Monstruos válidos:", validMonsters.length);
+
         const comboMap = new Map();
         validMonsters.forEach(m => {
           const rows = Array.isArray(m[rowCat]) ? m[rowCat] : [m[rowCat]];
@@ -196,6 +198,8 @@
             });
           });
         });
+
+        console.log("✅ Total de combinaciones válidas (row × col):", comboMap.size);
 
         const allRows = [...new Set(Array.from(comboMap.keys(), k => k.split('|')[0]))];
         const allCols = [...new Set(Array.from(comboMap.keys(), k => k.split('|')[1]))];
@@ -231,8 +235,10 @@
 
         buildGrid(validMonsters, rowCat, colCat, rowVals, colVals);
       })
-      .catch(err => console.error("Failed to load JSON", err));
+      .catch(err => {
+        console.error("Failed to load JSON", err);
+        document.getElementById("game").innerText = "❌ Error cargando datos de monstruos.";
+      });
   </script>
 </body>
 </html>
-
