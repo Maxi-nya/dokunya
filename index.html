@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Monhundoku (Prototype)</title>
+  <title>Dokunyan (Prototype)</title>
   <style>
     body {
       font-family: sans-serif;
@@ -58,7 +58,8 @@
   </style>
 </head>
 <body>
-  <h1 style="text-align:center">Monhundoku (Prototype)</h1>
+  <h1 style="text-align:center">DOKUNYAN (Prototype)</h1>
+  <div id="dailyInfo" style="text-align:center; margin: 10px 0; font-weight: bold;"></div>
   <h3 style="text-align:center">Daily puzzle: combine monster attributes to guess correctly. No repeats!</h3>
   <div id="game" style="text-align:center"></div>
 
@@ -75,9 +76,12 @@
 
     const usedMonsters = new Set();
 
-    function getDailySeed(date = new Date()) {
-      return `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}`;
-    }
+function getDailySeed(date = new Date()) {
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  return `${year}${month}${day}`;
+}
 
     function seededRandom(seed) {
       let h = 2166136261 >>> 0;
@@ -210,9 +214,25 @@
         const categoryKeys = Object.keys(categories).sort(() => rng() - 0.5);
         const rowCat = categoryKeys[0];
         const colCat = categoryKeys[1];
+        const dailyInfo = document.getElementById("dailyInfo");
+        dailyInfo.innerText = `🗓️ Puzzle del día: ${seed.slice(0,4)}-${seed.slice(4,6)}-${seed.slice(6)} – Categorías: ${categories[rowCat]} × ${categories[colCat]}`;
 
-        const rowVals = pickValues(rng, uniqueValues(monsters, rowCat), 3);
-        const colVals = pickValues(rng, uniqueValues(monsters, colCat), 3);
+
+// Filtra monstruos que tengan datos en ambas categorías
+const validMonsters = monsters.filter(m => {
+  const hasRow = m[rowCat] && (Array.isArray(m[rowCat]) ? m[rowCat].length : true);
+  const hasCol = m[colCat] && (Array.isArray(m[colCat]) ? m[colCat].length : true);
+  return hasRow && hasCol;
+});
+
+// Recolecta valores existentes de esos monstruos válidos
+const validRowVals = uniqueValues(validMonsters, rowCat);
+const validColVals = uniqueValues(validMonsters, colCat);
+
+// Elige 3 de cada uno de forma aleatoria
+const rowVals = pickValues(rng, validRowVals, 3);
+const colVals = pickValues(rng, validColVals, 3);
+
 
         buildGrid(monsters, rowCat, colCat, rowVals, colVals);
       })
