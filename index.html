@@ -209,32 +209,41 @@ function getDailySeed(date = new Date()) {
     fetch("monsters.json")
       .then(res => res.json())
       .then(monsters => {
-        const seed = getDailySeed();
-        const rng = seededRandom(seed);
-        const categoryKeys = Object.keys(categories).sort(() => rng() - 0.5);
-        const rowCat = categoryKeys[0];
-        const colCat = categoryKeys[1];
-        const dailyInfo = document.getElementById("dailyInfo");
-        dailyInfo.innerText = `🗓️ Puzzle del día: ${seed.slice(0,4)}-${seed.slice(4,6)}-${seed.slice(6)} – Categorías: ${categories[rowCat]} × ${categories[colCat]}`;
 
+     // 1️⃣ Definir categorías usando la semilla (igual que ahora)
+const seed = getDailySeed();
+const rng = seededRandom(seed);
+const categoryKeys = Object.keys(categories).sort(() => rng() - 0.5);
+const rowCat = categoryKeys[0];
+const colCat = categoryKeys[1];
 
-// Filtra monstruos que tengan datos en ambas categorías
+// 2️⃣ Filtrar solo monstruos con datos válidos en ambas categorías
 const validMonsters = monsters.filter(m => {
-  const hasRow = m[rowCat] && (Array.isArray(m[rowCat]) ? m[rowCat].length : true);
-  const hasCol = m[colCat] && (Array.isArray(m[colCat]) ? m[colCat].length : true);
-  return hasRow && hasCol;
+  const a = m[rowCat], b = m[colCat];
+  const okA = a && (Array.isArray(a) ? a.length > 0 : true);
+  const okB = b && (Array.isArray(b) ? b.length > 0 : true);
+  return okA && okB;
 });
 
-// Recolecta valores existentes de esos monstruos válidos
-const validRowVals = uniqueValues(validMonsters, rowCat);
-const validColVals = uniqueValues(validMonsters, colCat);
+// 3️⃣ Crear combinaciones únicas de valores (row × col) en validMonsters
+const combos = new Set();
+validMonsters.forEach(m => {
+  const rows = Array.isArray(m[rowCat]) ? m[rowCat] : [m[rowCat]];
+  const cols = Array.isArray(m[colCat]) ? m[colCat] : [m[colCat]];
+  rows.forEach(r => cols.forEach(c => combos.add(`${r}|${c}`)));
+});
 
-// Elige 3 de cada uno de forma aleatoria
-const rowVals = pickValues(rng, validRowVals, 3);
-const colVals = pickValues(rng, validColVals, 3);
+// Convertir combos y separar en rowVals y colVals
+const allRows = [...new Set(Array.from(combos, c => c.split('|')[0]))];
+const allCols = [...new Set(Array.from(combos, c => c.split('|')[1]))];
 
+// 4️⃣ Elegir hasta 3 valores al azar (pero coherentes)
+const rowVals = pickValues(rng, allRows, Math.min(3, allRows.length));
+const colVals = pickValues(rng, allCols, Math.min(3, allCols.length));
 
-        buildGrid(monsters, rowCat, colCat, rowVals, colVals);
+// 5️⃣ Finalmente construye la grilla
+dailyInfo.innerText = `🗓️ Puzzle del día: ${seed.slice(0,4)}-${seed.slice(4,6)}-${seed.slice(6)} – Categorías: ${categories[rowCat]} × ${categories[colCat]}`;
+buildGrid(validMonsters, rowCat, colCat, rowVals, colVals);
       })
       .catch(err => console.error("Failed to load JSON", err));
   </script>
