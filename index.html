@@ -211,7 +211,7 @@ fetch("monsters.json")
   .then(monsters => {
     const seed = getDailySeed();
     const rng = seededRandom(seed);
-    const categoryKeys = Object.keys(categories).sort(() => rng() - 0.5);
+    const categoryKeys = ["type", "element", "weakness", "main_map"].sort(() => rng() - 0.5);
     const rowCat = categoryKeys[0];
     const colCat = categoryKeys[1];
 
